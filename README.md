@@ -1,6 +1,7 @@
 # 4Ward - Robot Guidance with MoveIt #
 
 ### ME369P  Ademola Oridate, Ed Hu, Doug Feicht
+Final presentation [(here)](https://docs.google.com/presentation/d/17Ukz5PC6BCps5GtElDTN0TVy6ZJnzbunL3J4pHO2W8U/edit?usp=sharing)
 
 This project explores Virtual Fixtures, a method of assisting or constraining robot motion, using python and ROS/moveIt for visualization. 
 
@@ -50,7 +51,8 @@ import rospy
 import moveit_commander
 group = moveit_commander.MoveGroupCommander('panda_arm')
 ```
-A collision object is added to the planning scene (a box representing surgical table), and the rostopic "joy" is subscribed to.
+
+A collision object is added to the planning scene (a box representing surgical table), and the rostopic "joy" is subscribed.
 ```python
 #Add collision object to planning scene
 scene = moveit_commander.PlanningSceneInterface()
@@ -60,13 +62,52 @@ scene.add_box(box_name, box_pose, size = (3, 1, 0.1))
 rospy.Subscriber(‘joy’, Joy, callback)
 ```
 
+Received messages will be handled by the subscriber such that the callback() function is called. Callback will receive the command, and add a corresponding move increment to the current poses to create a new pose goal.
+```python
+def callback (data)
+   #data.axes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.0, -1.0]
+   #data.buttons = [(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+   curr_cart_pose = get_current_pose().pose
+   pose_goal = get_current_pose().pose
+
+   pose_incr =0.075
+   #jog in X axis
+   if data.axes[6]==1:
+      pose_goal.position.x = curr_cart_pose.position.x - pose_incr
+   go_to_pose_goal(pose_goal, group)
+```
+
+The go_to_joint_state() and go_to_pose_goal() will move the robot to the updated goal
+```python
+def go_to_joint_state (joint_goal, group)
+   group.go(joint_goal, wait=True)
+   group.stop()
+
+def go_to_pose_goal (pose_goal, group)
+   group.set_pose_target(pose_goal)
+   plan = group.go(wait=True)
+   group.stop()
+```
+
 ## Running the tests
+Markers and colision objects are added to the sceen using rospy.publisher() to publish the details to the RViz visualiation node.
+```python
+#Publish Marker to RVIZ
+marker =  Marker()
+pub =  rospy.Publisher(marker_topic, Marker, queue_size = 10)
+ 
+#Add collision object to planning scene
+scene =  moveit_commander.PlanningSceneInterface()
+scene.add_box(box_name, box_pose, size = (0.4, 0.4, 0.4))
+```
 
 ### Cartesian Jogging
+Use the D-pad keys to move the robot end effector parralel to the grid.
 
 ### Jog Individual Joints
+Press the right bumper (front, upper) button while pressing one of the "YXBA" buttons to move individual joints. Press the left bumper to move negative direciton.
 
-### Collision Avoidance Test
+### Collision Detection Test
 
 ### Virtual Fixture Test
 
